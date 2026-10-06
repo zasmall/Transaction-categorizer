@@ -1,13 +1,36 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { Building2, Landmark, Upload } from '@lucide/vue';
+import Heading from '@/components/Heading.vue';
+import { Badge } from '@/components/ui/badge';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { dashboard } from '@/routes';
+import { index as importsIndex } from '@/routes/clients/imports';
+
+type ClientCard = {
+    name: string;
+    slug: string;
+    role: 'owner' | 'bookkeeper';
+    bank_accounts_count: number;
+    imports_count: number;
+    uncategorized_count: number;
+};
+
+defineProps<{
+    clients: ClientCard[];
+}>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'Dashboard',
+                title: 'Clients',
                 href: dashboard(),
             },
         ],
@@ -16,32 +39,61 @@ defineOptions({
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Clients" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
-        <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
+    <div class="flex flex-1 flex-col gap-6 p-4">
+        <Heading
+            title="Clients"
+            description="Pick a client to import statements and review transactions."
+        />
+
+        <p v-if="clients.length === 0" class="text-sm text-muted-foreground">
+            You don't have access to any clients yet.
+        </p>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Link
+                v-for="client in clients"
+                :key="client.slug"
+                :href="importsIndex(client.slug)"
+                class="rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
             >
-                <PlaceholderPattern />
-            </div>
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-        </div>
-        <div
-            class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border"
-        >
-            <PlaceholderPattern />
+                <Card class="h-full transition-colors hover:border-primary/40">
+                    <CardHeader>
+                        <div class="flex items-start justify-between gap-2">
+                            <CardTitle class="flex items-center gap-2">
+                                <Building2
+                                    class="size-4 text-muted-foreground"
+                                />
+                                {{ client.name }}
+                            </CardTitle>
+                            <Badge variant="outline" class="capitalize">
+                                {{ client.role }}
+                            </Badge>
+                        </div>
+                        <CardDescription>
+                            {{ client.uncategorized_count }} uncategorized
+                            {{
+                                client.uncategorized_count === 1
+                                    ? 'transaction'
+                                    : 'transactions'
+                            }}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent
+                        class="flex gap-6 text-sm text-muted-foreground"
+                    >
+                        <span class="flex items-center gap-1.5">
+                            <Landmark class="size-4" />
+                            {{ client.bank_accounts_count }} accounts
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <Upload class="size-4" />
+                            {{ client.imports_count }} imports
+                        </span>
+                    </CardContent>
+                </Card>
+            </Link>
         </div>
     </div>
 </template>

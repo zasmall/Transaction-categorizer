@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CategorizationStatus;
 use App\Enums\ClientRole;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $settings
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read ClientMembership $membership The viewing user's membership, when loaded through User::clients().
  */
 #[Fillable(['name', 'slug', 'fiscal_year_start', 'settings'])]
 class Client extends Model
@@ -65,6 +67,30 @@ class Client extends Model
     public function bankAccounts(): HasMany
     {
         return $this->hasMany(BankAccount::class);
+    }
+
+    /**
+     * @return HasMany<Transaction, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * @return HasMany<Transaction, $this>
+     */
+    public function uncategorizedTransactions(): HasMany
+    {
+        return $this->transactions()->where('categorization_status', CategorizationStatus::Uncategorized);
+    }
+
+    /**
+     * @return HasMany<Import, $this>
+     */
+    public function imports(): HasMany
+    {
+        return $this->hasMany(Import::class);
     }
 
     /**

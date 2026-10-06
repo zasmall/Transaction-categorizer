@@ -3,6 +3,7 @@
 ## Data model
 
 ### Tenancy and setup
+
 - **clients**: `id, name, slug, fiscal_year_start, settings (json)`
 - **client_user**: `client_id, user_id, role` — one bookkeeper can manage many clients
 - **accounts** (chart of accounts): `id, client_id, code, name, type (asset|liability|equity|income|expense), parent_id, qbo_name, is_active`
@@ -10,16 +11,19 @@
 - **import_profiles**: `id, client_id (nullable = system default), parser_key, column_map (json), date_format, amount_convention (signed|debit_credit_columns|inverted), delimiter, has_header`
 
 ### Import and transactions
-- **imports**: `id, client_id, bank_account_id, user_id, original_filename, stored_path, file_hash, status, total_rows, imported_rows, duplicate_rows, failed_rows, error, started_at, finished_at`
-- **import_rows**: `id, import_id, row_number, raw (json), status, error` — staging table; keeps original data for audit/reprocessing
+
+- **imports**: `id, client_id, bank_account_id, import_profile_id, user_id, original_filename, stored_path, file_hash, status, total_rows, imported_rows, duplicate_rows, failed_rows, error, started_at, finished_at`
+- **import_rows**: `id, import_id, row_number, raw (json), normalized (json), status (pending|normalized|imported|duplicate|failed), error` — staging table; keeps original data for audit/reprocessing. `normalized` lets each stage run (and retry) independently.
 - **transactions**: `id, client_id, bank_account_id, import_id, import_row_id, posted_on (date), amount_cents (signed bigint), description_raw, payee_normalized, memo, fingerprint, account_id (nullable), categorization_status (uncategorized|suggested|approved)`
-  - Unique index on `(bank_account_id, fingerprint)`
+    - Unique index on `(bank_account_id, fingerprint)`
 
 ### Categorization
+
 - **categorization_rules**: `id, client_id, name, priority, match_field (payee|description|memo), operator (contains|starts_with|equals|regex), pattern, direction (inflow|outflow|any), amount_min_cents, amount_max_cents, account_id, source (manual|learned), hits_count, last_matched_at, is_active`
 - **categorizations**: `id, transaction_id, account_id, method (rule|ai|manual), rule_id, confidence, ai_reason, model, user_id, is_current, created_at` — append-only audit trail
 
 ### Key decisions
+
 - **Fingerprint** = hash of `posted_on + amount_cents + normalized description + occurrence index`. The occurrence index distinguishes legitimate same-day duplicates (two identical coffees) from re-imported rows.
 - **Categorization history** is a separate table so any transaction can answer "why is this in Meals?"
 
@@ -31,17 +35,17 @@ Upload ─► ParseFile ─► NormalizeRows ─► PersistAndDedupe ─► Appl
 
 Each stage is a queued job on the `imports` queue; the AI batch runs on the `ai` queue. Both run on Redis and are supervised by Laravel Horizon (`config/horizon.php` defines one supervisor per queue), which gives a live view of throughput, runtimes, batches and failed jobs. Jobs are tagged `import:{id}` and `client:{id}`.
 
-Import status: `pending → parsing → normalizing → categorizing → completed | completed_with_errors | failed`
+Import status: `pending → parsing → normalizing → persisting → (categorizing) → completed | completed_with_errors | failed`
 
 1. **Upload (controller)** — validate, store, hash file. Warn if the same file hash was already imported for that bank account. Create `Import` (pending), dispatch `Bus::chain`.
 2. **ParseFile** — resolve parser from the import profile; stream rows into `import_rows` in chunks.
-   ```php
-   interface StatementParser {
-       /** @return iterable<RawRow> */
-       public function parse(string $path, ImportProfile $profile): iterable;
-   }
-   ```
-   Start with `CsvParser` (driven by `column_map`); `OfxParser` later.
+    ```php
+    interface StatementParser {
+        /** @return iterable<RawRow> */
+        public function parse(string $path, ImportProfile $profile): iterable;
+    }
+    ```
+    Start with `CsvParser` (driven by `column_map`); `OfxParser` later.
 3. **NormalizeRows** — map to `NormalizedTransaction` DTO (amount convention, date format). Payee normalizer pipeline: strip processor prefixes (`SQ *`, `TST*`, `POS`), store numbers, trailing IDs; title-case. Bad rows → `failed` with reason.
 4. **PersistAndDedupe** — compute fingerprints; chunked DB transactions with `insertOrIgnore` against the unique index; count duplicates/failures.
 5. **ApplyRules** — `RuleEngine` evaluates active rules by priority, first match wins. Writes categorization (`method=rule`, approved), increments hit count.
@@ -49,12 +53,25 @@ Import status: `pending → parsing → normalizing → categorizing → complet
 7. **Finalize** — update counts and status; broadcast `ImportCompleted` (Reverb) or poll.
 
 ## Review loop
+
 - Queue of `suggested` + `uncategorized`, lowest confidence first; bulk approve.
 - On manual correction, offer "Create rule from this?" prefilled from `payee_normalized`.
 - When the same payee is approved to the same account 3+ times, suggest a learned rule.
 - Over time rules handle more and AI handles less — lower API cost.
 
 ## Showcase extras
+
 - Seeded demo with fake data (no signup needed)
 - README with architecture diagram and design rationale
 - Short screen recording: messy CSV → categorized
+
+## Import pipeline: implementation notes (Milestone 2)
+
+- **Where things live**: `App\Imports\Parsing` (`StatementParser`, `CsvParser`, `ParserRegistry`, `RawRow`), `App\Imports\Normalizing` (`TransactionNormalizer`, `PayeeNormalizer`, `NormalizedTransaction`), `App\Imports\Fingerprinter`, `App\Support\Money`, jobs in `App\Jobs\Imports`, orchestration in `App\Services\ImportService`.
+- **Two kinds of failure**: `InvalidStatementFile` (wrong columns, empty file) fails the whole import with a user-facing message; `InvalidRow` marks one row failed and the import carries on. Anything unexpected is thrown, shows up as a failed job in Horizon, and the chain's `catch` marks the import failed.
+- **Stopping the chain**: the `SkipIfImportFailed` job middleware skips later stages once an import is marked failed, so expected failures don't pile up as Horizon errors.
+- **Retry safety**: parsing is skipped if a previous attempt finished it (`total_rows > 0`), otherwise partial rows are cleared first; normalizing only touches `pending` rows; persisting re-fingerprints every normalized/imported/duplicate row in file order (occurrence indexes depend on it) but only inserts `normalized` ones, with `insertOrIgnore` against the unique index.
+- **Fingerprints** use the raw description (lowercased, whitespace-collapsed), not the cleaned payee, so improving payee rules never changes existing fingerprints.
+- **Money** is parsed from the string (`"1,234.56"`, `"(45.00)"`, `"-$5"`) straight to integer cents; floats are never involved.
+- **Payee cleanup** strips processor prefixes, store/reference numbers, phone numbers, ACH addenda and a trailing state code. City names stay, so rules should use `contains` / `starts_with`.
+- **Duplicate file warning**: uploading a file whose SHA-256 matches an earlier (non-failed) import into the same bank account is rejected unless "Import anyway" is ticked. Row-level dedupe would skip everything regardless; this just catches the likely mistake.
