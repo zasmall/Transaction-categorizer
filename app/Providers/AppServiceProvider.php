@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +25,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDevCommands();
+    }
+
+    /**
+     * Run Horizon instead of queue:listen under `composer dev`.
+     */
+    protected function configureDevCommands(): void
+    {
+        DevCommands::except('queue');
+        DevCommands::artisan('horizon', 'horizon');
     }
 
     /**

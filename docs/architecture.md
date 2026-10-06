@@ -29,6 +29,8 @@
 Upload ─► ParseFile ─► NormalizeRows ─► PersistAndDedupe ─► ApplyRules ─► AiCategorize (Bus::batch) ─► Finalize
 ```
 
+Each stage is a queued job on the `imports` queue; the AI batch runs on the `ai` queue. Both run on Redis and are supervised by Laravel Horizon (`config/horizon.php` defines one supervisor per queue), which gives a live view of throughput, runtimes, batches and failed jobs. Jobs are tagged `import:{id}` and `client:{id}`.
+
 Import status: `pending → parsing → normalizing → categorizing → completed | completed_with_errors | failed`
 
 1. **Upload (controller)** — validate, store, hash file. Warn if the same file hash was already imported for that bank account. Create `Import` (pending), dispatch `Bus::chain`.
