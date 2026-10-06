@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ImportStatus;
+use App\Jobs\Imports\ApplyCategorizationRules;
 use App\Jobs\Imports\FinalizeImport;
 use App\Jobs\Imports\ImportStage;
 use App\Jobs\Imports\NormalizeImportRows;
@@ -68,6 +69,7 @@ class ImportService
             new ParseImportFile($import),
             new NormalizeImportRows($import),
             new PersistImportedTransactions($import),
+            new ApplyCategorizationRules($import),
             new FinalizeImport($import),
         ])
             ->onQueue(ImportStage::QUEUE)

@@ -2,3 +2,4 @@ export * from './auth';
 export * from './navigation';
 export * from './ui';
 export * from './imports';
+export * from './categorization';

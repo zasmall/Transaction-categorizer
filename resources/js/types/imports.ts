@@ -3,6 +3,7 @@ export type ImportStatus =
     | 'parsing'
     | 'normalizing'
     | 'persisting'
+    | 'categorizing'
     | 'completed'
     | 'completed_with_errors'
     | 'failed';
@@ -30,6 +31,7 @@ export type Import = {
     imported_rows: number;
     duplicate_rows: number;
     failed_rows: number;
+    categorized_rows: number;
     error: string | null;
     uploaded_by?: string | null;
     created_at: string;

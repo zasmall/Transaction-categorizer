@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, setLayoutProps, usePoll } from '@inertiajs/vue3';
 import { ArrowLeft, Check, Circle, CircleX } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import ClientNav from '@/components/clients/ClientNav.vue';
 import Heading from '@/components/Heading.vue';
 import ImportStatusBadge from '@/components/imports/ImportStatusBadge.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -35,17 +36,27 @@ setLayoutProps({
 });
 
 // Refresh every second while the queue works through the import, then stop.
-const { stop } = usePoll(1000, { only: ['statementImport', 'rows'] });
+// Started from onMounted (not autoStart) so a finished import never polls at all.
+const { start, stop } = usePoll(
+    1000,
+    { only: ['statementImport', 'rows'] },
+    { autoStart: false },
+);
+onMounted(() => {
+    if (!props.statementImport.is_finished) {
+        start();
+    }
+});
 watch(
     () => props.statementImport.is_finished,
     (finished) => finished && stop(),
-    { immediate: true },
 );
 
 const stages: { status: ImportStatus; label: string }[] = [
     { status: 'parsing', label: 'Parse file' },
     { status: 'normalizing', label: 'Clean up rows' },
     { status: 'persisting', label: 'Save & de-duplicate' },
+    { status: 'categorizing', label: 'Apply rules' },
     { status: 'completed', label: 'Done' },
 ];
 
@@ -54,6 +65,7 @@ const order: ImportStatus[] = [
     'parsing',
     'normalizing',
     'persisting',
+    'categorizing',
     'completed',
 ];
 
@@ -115,7 +127,9 @@ function rawSummary(row: ImportRow): string {
             </Button>
         </div>
 
-        <ol class="grid gap-3 sm:grid-cols-4" aria-label="Import progress">
+        <ClientNav :client="client" />
+
+        <ol class="grid gap-3 sm:grid-cols-5" aria-label="Import progress">
             <li
                 v-for="stage in stages"
                 :key="stage.status"
@@ -153,7 +167,7 @@ function rawSummary(row: ImportRow): string {
             <AlertDescription>{{ statementImport.error }}</AlertDescription>
         </Alert>
 
-        <dl class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <dl class="grid grid-cols-2 gap-3 sm:grid-cols-6">
             <div class="rounded-lg border p-3">
                 <dt class="text-xs text-muted-foreground">Status</dt>
                 <dd class="mt-1">
@@ -178,6 +192,14 @@ function rawSummary(row: ImportRow): string {
                 </dt>
                 <dd class="mt-1 text-xl font-semibold tabular-nums">
                     {{ statementImport.duplicate_rows }}
+                </dd>
+            </div>
+            <div class="rounded-lg border p-3">
+                <dt class="text-xs text-muted-foreground">
+                    Categorized by rules
+                </dt>
+                <dd class="mt-1 text-xl font-semibold tabular-nums">
+                    {{ statementImport.categorized_rows }}
                 </dd>
             </div>
             <div class="rounded-lg border p-3">

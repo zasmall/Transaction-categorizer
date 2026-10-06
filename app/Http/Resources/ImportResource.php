@@ -27,6 +27,7 @@ class ImportResource extends JsonResource
             'imported_rows' => $this->imported_rows,
             'duplicate_rows' => $this->duplicate_rows,
             'failed_rows' => $this->failed_rows,
+            'categorized_rows' => $this->categorized_rows,
             'error' => $this->error,
             'uploaded_by' => $this->whenLoaded('user', fn () => $this->user?->name),
             'created_at' => $this->created_at?->toIso8601String(),

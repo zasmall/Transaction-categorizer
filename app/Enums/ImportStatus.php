@@ -8,6 +8,7 @@ enum ImportStatus: string
     case Parsing = 'parsing';
     case Normalizing = 'normalizing';
     case Persisting = 'persisting';
+    case Categorizing = 'categorizing';
     case Completed = 'completed';
     case CompletedWithErrors = 'completed_with_errors';
     case Failed = 'failed';

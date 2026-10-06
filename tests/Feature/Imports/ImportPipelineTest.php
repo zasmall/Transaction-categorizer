@@ -6,6 +6,7 @@ use App\Enums\ImportStatus;
 use App\Imports\Normalizing\TransactionNormalizer;
 use App\Imports\Parsing\ParserRegistry;
 use App\Imports\Parsing\StatementParser;
+use App\Jobs\Imports\ApplyCategorizationRules;
 use App\Jobs\Imports\FinalizeImport;
 use App\Jobs\Imports\NormalizeImportRows;
 use App\Jobs\Imports\ParseImportFile;
@@ -206,6 +207,7 @@ test('the pipeline is queued as a chain on the imports queue', function () {
         ParseImportFile::class,
         NormalizeImportRows::class,
         PersistImportedTransactions::class,
+        ApplyCategorizationRules::class,
         FinalizeImport::class,
     ]);
 
@@ -223,4 +225,22 @@ test('an earlier import of the same file can be found', function () {
 
     expect($service->previousImportOf($bankAccount, statementFixture('chase_checking.csv'))?->id)->toBe($first->id)
         ->and($service->previousImportOf($bankAccount, statementFixture('amex_card.csv')))->toBeNull();
+});
+
+test('rules categorize new transactions during the import', function () {
+    $meals = $this->client->accounts()->where('code', '6400')->sole();
+    $this->client->rules()->create([
+        'name' => 'Coffee shops',
+        'match_field' => 'payee',
+        'operator' => 'contains',
+        'pattern' => 'blue bottle',
+        'account_id' => $meals->id,
+    ]);
+
+    $import = runImport(bankAccountUsing(ImportProfileSeeder::CHASE_CHECKING), statementFixture('chase_checking.csv'));
+
+    expect($import->status)->toBe(ImportStatus::CompletedWithErrors)
+        ->and($import->categorized_rows)->toBe(2)
+        ->and(Transaction::where('account_id', $meals->id)->count())->toBe(2)
+        ->and(Transaction::where('categorization_status', CategorizationStatus::Uncategorized)->count())->toBe(4);
 });

@@ -2,11 +2,12 @@
 
 namespace App\Jobs\Imports;
 
+use App\Enums\CategorizationStatus;
 use App\Enums\ImportRowStatus;
 use App\Enums\ImportStatus;
 
 /**
- * Records the final row counts and status.
+ * Records the final counts and status.
  */
 class FinalizeImport extends ImportStage
 {
@@ -24,6 +25,9 @@ class FinalizeImport extends ImportStage
             'imported_rows' => (int) ($counts[ImportRowStatus::Imported->value] ?? 0),
             'duplicate_rows' => (int) ($counts[ImportRowStatus::Duplicate->value] ?? 0),
             'failed_rows' => $failed,
+            'categorized_rows' => $this->import->transactions()
+                ->where('categorization_status', '!=', CategorizationStatus::Uncategorized)
+                ->count(),
             'finished_at' => now(),
         ]);
     }

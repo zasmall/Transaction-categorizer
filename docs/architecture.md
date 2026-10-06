@@ -20,7 +20,7 @@
 ### Categorization
 
 - **categorization_rules**: `id, client_id, name, priority, match_field (payee|description|memo), operator (contains|starts_with|equals|regex), pattern, direction (inflow|outflow|any), amount_min_cents, amount_max_cents, account_id, source (manual|learned), hits_count, last_matched_at, is_active`
-- **categorizations**: `id, transaction_id, account_id, method (rule|ai|manual), rule_id, confidence, ai_reason, model, user_id, is_current, created_at` — append-only audit trail
+- **categorizations**: `id, transaction_id, account_id, method (rule|ai|manual), rule_id, rule_name, confidence, ai_reason, model, user_id, is_current, created_at` — append-only audit trail (`rule_name` is copied so history still reads well after a rule is deleted)
 
 ### Key decisions
 
@@ -75,3 +75,13 @@ Import status: `pending → parsing → normalizing → persisting → (categori
 - **Money** is parsed from the string (`"1,234.56"`, `"(45.00)"`, `"-$5"`) straight to integer cents; floats are never involved.
 - **Payee cleanup** strips processor prefixes, store/reference numbers, phone numbers, ACH addenda and a trailing state code. City names stay, so rules should use `contains` / `starts_with`.
 - **Duplicate file warning**: uploading a file whose SHA-256 matches an earlier (non-failed) import into the same bank account is rejected unless "Import anyway" is ticked. Row-level dedupe would skip everything regardless; this just catches the likely mistake.
+
+## Rules and categorization: implementation notes (Milestone 3)
+
+- **Single writer**: `CategorizationService` is the only code that writes categorizations. Each decision appends a row, clears `is_current` on the previous one, and updates the transaction's `account_id` and `categorization_status`, all in one DB transaction. It refuses an account belonging to another client.
+- **Precedence**: people beat rules, and rules beat AI. Rules only touch `uncategorized` and `suggested` transactions, never `approved` ones. A manual categorization always wins.
+- **Matching** (`CategorizationRule::matches`, `App\Categorization\RuleEngine`): case-insensitive `contains` / `starts_with` / `equals`, or a regex wrapped as `~pattern~iu` (validated on save; an invalid one never matches). Optional direction (money in/out) and inclusive bounds on the **absolute** amount. Rules run by `priority` ascending, then `id`; first match wins. Rules whose account is inactive are skipped.
+- **Pipeline**: `ApplyCategorizationRules` runs after persisting (status `categorizing`); `FinalizeImport` records `categorized_rows`.
+- **Rule hits**: `hits_count` / `last_matched_at` are bumped once per rule per run with `incrementEach`, not per transaction.
+- **Rule suggestions**: after a manual categorization, if no existing rule would have chosen the same account, the response flashes `ruleSuggestion` (payee, account, and how many other uncategorized transactions a "payee contains" rule would catch). "Create rule" opens the rule form prefilled from it.
+- **Scale note**: "apply rules now" runs in the request. Fine at demo scale; for large backlogs it would move onto the queue like the import stages.

@@ -21,7 +21,8 @@ class AccountFactory extends Factory
     {
         return [
             'client_id' => Client::factory(),
-            'code' => (string) fake()->unique()->numberBetween(6000, 6999),
+            // Five digits so factory accounts never collide with the four-digit default chart.
+            'code' => (string) fake()->unique()->numberBetween(10000, 99999),
             'name' => ucfirst(fake()->word()).' Expense',
             'type' => AccountType::Expense,
             'is_active' => true,

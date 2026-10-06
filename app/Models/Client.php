@@ -86,6 +86,16 @@ class Client extends Model
     }
 
     /**
+     * Named "rules" so {rule} route parameters bind scoped to the client.
+     *
+     * @return HasMany<CategorizationRule, $this>
+     */
+    public function rules(): HasMany
+    {
+        return $this->hasMany(CategorizationRule::class);
+    }
+
+    /**
      * @return HasMany<Import, $this>
      */
     public function imports(): HasMany

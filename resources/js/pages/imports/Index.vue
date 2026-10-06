@@ -2,6 +2,7 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ImportController from '@/actions/App/Http/Controllers/ImportController';
+import ClientNav from '@/components/clients/ClientNav.vue';
 import Heading from '@/components/Heading.vue';
 import ImportStatusBadge from '@/components/imports/ImportStatusBadge.vue';
 import InputError from '@/components/InputError.vue';
@@ -57,8 +58,10 @@ const fieldClass =
     <div class="flex flex-1 flex-col gap-6 p-4">
         <Heading
             :title="client.name"
-            description="Upload bank and credit card statements. Rows are parsed, cleaned up and de-duplicated in the background."
+            description="Upload bank and credit card statements. Rows are parsed, cleaned up, de-duplicated and run through your rules in the background."
         />
+
+        <ClientNav :client="client" />
 
         <Card class="max-w-2xl">
             <CardHeader>

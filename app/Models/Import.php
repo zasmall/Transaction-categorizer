@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property int $imported_rows
  * @property int $duplicate_rows
  * @property int $failed_rows
+ * @property int $categorized_rows Transactions categorized by rules during this import.
  * @property string|null $error
  * @property Carbon|null $started_at
  * @property Carbon|null $finished_at
@@ -35,7 +36,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'bank_account_id', 'import_profile_id', 'user_id', 'original_filename', 'stored_path', 'file_hash',
-    'status', 'total_rows', 'imported_rows', 'duplicate_rows', 'failed_rows', 'error', 'started_at', 'finished_at',
+    'status', 'total_rows', 'imported_rows', 'duplicate_rows', 'failed_rows', 'categorized_rows', 'error', 'started_at', 'finished_at',
 ])]
 class Import extends Model
 {
@@ -55,6 +56,7 @@ class Import extends Model
             'imported_rows' => 'integer',
             'duplicate_rows' => 'integer',
             'failed_rows' => 'integer',
+            'categorized_rows' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

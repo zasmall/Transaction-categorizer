@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -74,5 +76,23 @@ class Transaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * Every categorization decision for this transaction, oldest first.
+     *
+     * @return HasMany<Categorization, $this>
+     */
+    public function categorizations(): HasMany
+    {
+        return $this->hasMany(Categorization::class)->oldest('id');
+    }
+
+    /**
+     * @return HasOne<Categorization, $this>
+     */
+    public function currentCategorization(): HasOne
+    {
+        return $this->hasOne(Categorization::class)->where('is_current', true);
     }
 }
