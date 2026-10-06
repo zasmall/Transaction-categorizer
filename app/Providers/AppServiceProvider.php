@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Imports\Parsing\CsvParser;
+use App\Imports\Parsing\ParserRegistry;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
@@ -16,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ParserRegistry::class, fn ($app) => new ParserRegistry([
+            'csv' => $app->make(CsvParser::class),
+        ]));
     }
 
     /**
