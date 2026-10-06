@@ -9,6 +9,7 @@ enum ImportStatus: string
     case Normalizing = 'normalizing';
     case Persisting = 'persisting';
     case Categorizing = 'categorizing';
+    case Suggesting = 'suggesting';
     case Completed = 'completed';
     case CompletedWithErrors = 'completed_with_errors';
     case Failed = 'failed';

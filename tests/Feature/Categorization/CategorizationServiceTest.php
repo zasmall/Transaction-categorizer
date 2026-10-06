@@ -151,3 +151,23 @@ test('a transaction cannot be categorized to another client\'s account', functio
 
     expect(Categorization::count())->toBe(0);
 });
+
+test('AI suggestions only land on uncategorized transactions', function () {
+    $open = clientTransaction();
+    $ruled = clientTransaction();
+    clientRule($this->meals);
+    $this->service->applyRules($this->client, Transaction::query()->whereKey($ruled->id));
+
+    expect($this->service->suggest($open, $this->software, 75, 'Looks like software', 'claude-opus-5-5'))->toBeTrue()
+        ->and($this->service->suggest($ruled->refresh(), $this->software, 99, 'Override?', 'claude-opus-5-5'))->toBeFalse()
+        ->and($ruled->refresh()->account_id)->toBe($this->meals->id)
+        ->and($open->refresh()->categorization_status)->toBe(CategorizationStatus::Suggested);
+});
+
+test('AI confidence is clamped to 0–100', function () {
+    $transaction = clientTransaction();
+
+    $this->service->suggest($transaction, $this->meals, 140, 'Very sure', 'claude-opus-5-5');
+
+    expect($transaction->currentCategorization->confidence)->toBe(100);
+});

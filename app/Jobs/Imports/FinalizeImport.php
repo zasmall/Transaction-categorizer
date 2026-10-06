@@ -25,8 +25,9 @@ class FinalizeImport extends ImportStage
             'imported_rows' => (int) ($counts[ImportRowStatus::Imported->value] ?? 0),
             'duplicate_rows' => (int) ($counts[ImportRowStatus::Duplicate->value] ?? 0),
             'failed_rows' => $failed,
+            // During an import only rules approve anything; AI suggestions are counted separately.
             'categorized_rows' => $this->import->transactions()
-                ->where('categorization_status', '!=', CategorizationStatus::Uncategorized)
+                ->where('categorization_status', CategorizationStatus::Approved)
                 ->count(),
             'finished_at' => now(),
         ]);

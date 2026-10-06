@@ -4,6 +4,7 @@ export type ImportStatus =
     | 'normalizing'
     | 'persisting'
     | 'categorizing'
+    | 'suggesting'
     | 'completed'
     | 'completed_with_errors'
     | 'failed';
@@ -32,6 +33,11 @@ export type Import = {
     duplicate_rows: number;
     failed_rows: number;
     categorized_rows: number;
+    ai_suggested_rows: number;
+    ai_model: string | null;
+    ai_is_demo: boolean;
+    ai_input_tokens: number;
+    ai_output_tokens: number;
     error: string | null;
     uploaded_by?: string | null;
     created_at: string;

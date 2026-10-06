@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, setLayoutProps, usePage } from '@inertiajs/vue3';
-import { Sparkles, X } from '@lucide/vue';
+import { Check, Sparkles, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import AccountSelect from '@/components/AccountSelect.vue';
 import ClientNav from '@/components/clients/ClientNav.vue';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { create as createRule } from '@/routes/clients/rules';
-import { index, update } from '@/routes/clients/transactions';
+import { approve, index, update } from '@/routes/clients/transactions';
 import type {
     AccountOption,
     CategorizationStatus,
@@ -64,6 +64,18 @@ const filters = computed(() => {
 });
 
 const saving = ref<number | null>(null);
+
+function approveSuggestion(transaction: TransactionRow) {
+    router.post(
+        approve.url([props.client.slug, transaction.id]),
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (saving.value = transaction.id),
+            onFinish: () => (saving.value = null),
+        },
+    );
+}
 
 function categorize(transaction: TransactionRow, accountId: number | null) {
     if (accountId === null || accountId === transaction.account_id) {
@@ -241,7 +253,23 @@ function categorize(transaction: TransactionRow, accountId: number | null) {
                                     >Needs review</Badge
                                 >
                                 {{ transaction.explanation }}
+                                <Button
+                                    v-if="transaction.status === 'suggested'"
+                                    size="sm"
+                                    variant="outline"
+                                    class="ml-auto h-6 px-2 text-xs"
+                                    :disabled="saving === transaction.id"
+                                    @click="approveSuggestion(transaction)"
+                                >
+                                    <Check /> Approve
+                                </Button>
                             </div>
+                            <p
+                                v-if="transaction.ai_reason"
+                                class="mt-1 text-xs text-muted-foreground italic"
+                            >
+                                “{{ transaction.ai_reason }}”
+                            </p>
                         </td>
                     </tr>
                 </tbody>

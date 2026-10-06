@@ -23,6 +23,7 @@ export type TransactionRow = {
     account_id: number | null;
     status: CategorizationStatus;
     explanation: string | null;
+    ai_reason: string | null;
 };
 
 export type RuleDirection = 'any' | 'inflow' | 'outflow';

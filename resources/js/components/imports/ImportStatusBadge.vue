@@ -14,6 +14,7 @@ const styles: Record<ImportStatus | ImportRowStatus, string> = {
     normalizing: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
     persisting: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
     categorizing: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
+    suggesting: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
     normalized: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
     completed:
         'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
@@ -26,9 +27,13 @@ const styles: Record<ImportStatus | ImportRowStatus, string> = {
 };
 
 const inProgress = computed(() =>
-    ['parsing', 'normalizing', 'persisting', 'categorizing'].includes(
-        props.status,
-    ),
+    [
+        'parsing',
+        'normalizing',
+        'persisting',
+        'categorizing',
+        'suggesting',
+    ].includes(props.status),
 );
 
 const label = computed(() => {

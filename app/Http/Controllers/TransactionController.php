@@ -46,6 +46,7 @@ class TransactionController extends Controller
                 'account_id' => $transaction->account_id,
                 'status' => $transaction->categorization_status,
                 'explanation' => $transaction->currentCategorization?->explanation(),
+                'ai_reason' => $transaction->currentCategorization?->ai_reason,
             ]);
 
         return Inertia::render('transactions/Index', [
@@ -79,6 +80,22 @@ class TransactionController extends Controller
                 'similar' => $this->similarUncategorizedCount($client, $transaction),
             ]);
         }
+
+        return back();
+    }
+
+    /**
+     * Accept the suggested account as-is. Recorded as a person's decision.
+     */
+    public function approve(Client $client, Transaction $transaction, Request $request, CategorizationService $categorizer): RedirectResponse
+    {
+        Gate::authorize('view', $client);
+
+        abort_unless($transaction->categorization_status === CategorizationStatus::Suggested && $transaction->account !== null, 422, 'Only suggested transactions can be approved.');
+
+        $categorizer->categorizeManually($transaction, $transaction->account, $request->user());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Approved as :account.', ['account' => $transaction->account->name])]);
 
         return back();
     }

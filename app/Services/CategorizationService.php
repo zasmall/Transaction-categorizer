@@ -35,6 +35,28 @@ class CategorizationService
     }
 
     /**
+     * Record an AI suggestion. Only uncategorized transactions take suggestions:
+     * anything a rule or a person already decided is left alone.
+     *
+     * @return bool Whether the suggestion was recorded.
+     */
+    public function suggest(Transaction $transaction, Account $account, int $confidence, string $reason, string $model): bool
+    {
+        if ($transaction->categorization_status !== CategorizationStatus::Uncategorized) {
+            return false;
+        }
+
+        $this->record($transaction, $account, CategorizationStatus::Suggested, [
+            'method' => CategorizationMethod::Ai,
+            'confidence' => max(0, min(100, $confidence)),
+            'ai_reason' => mb_substr($reason, 0, 500),
+            'model' => $model,
+        ]);
+
+        return true;
+    }
+
+    /**
      * Run the client's rules over uncategorized and AI-suggested transactions.
      * Approved transactions are never touched: a person's decision always wins.
      *

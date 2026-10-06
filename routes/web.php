@@ -18,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
         Route::patch('transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+        Route::post('transactions/{transaction}/approve', [TransactionController::class, 'approve'])->name('transactions.approve');
 
         Route::post('rules/apply', [CategorizationRuleController::class, 'apply'])->name('rules.apply');
         Route::resource('rules', CategorizationRuleController::class)->except('show');

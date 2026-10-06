@@ -35,7 +35,7 @@ Upload ─► ParseFile ─► NormalizeRows ─► PersistAndDedupe ─► Appl
 
 Each stage is a queued job on the `imports` queue; the AI batch runs on the `ai` queue. Both run on Redis and are supervised by Laravel Horizon (`config/horizon.php` defines one supervisor per queue), which gives a live view of throughput, runtimes, batches and failed jobs. Jobs are tagged `import:{id}` and `client:{id}`.
 
-Import status: `pending → parsing → normalizing → persisting → (categorizing) → completed | completed_with_errors | failed`
+Import status: `pending → parsing → normalizing → persisting → categorizing → suggesting → completed | completed_with_errors | failed`
 
 1. **Upload (controller)** — validate, store, hash file. Warn if the same file hash was already imported for that bank account. Create `Import` (pending), dispatch `Bus::chain`.
 2. **ParseFile** — resolve parser from the import profile; stream rows into `import_rows` in chunks.
@@ -85,3 +85,14 @@ Import status: `pending → parsing → normalizing → persisting → (categori
 - **Rule hits**: `hits_count` / `last_matched_at` are bumped once per rule per run with `incrementEach`, not per transaction.
 - **Rule suggestions**: after a manual categorization, if no existing rule would have chosen the same account, the response flashes `ruleSuggestion` (payee, account, and how many other uncategorized transactions a "payee contains" rule would catch). "Create rule" opens the rule form prefilled from it.
 - **Scale note**: "apply rules now" runs in the request. Fine at demo scale; for large backlogs it would move onto the queue like the import stages.
+
+## AI fallback: implementation notes (Milestone 4)
+
+- **Where it lives**: `App\Categorization\Ai` — `AiCategorizer` interface, `ClaudeCategorizer` (Prism), `DemoCategorizer`, `FewShotExamples`; jobs `QueueAiSuggestions` and `SuggestCategoriesForChunk`; config in `config/categorization.php`.
+- **Drivers** (`AI_CATEGORIZER`): `anthropic` calls Claude via Prism (needs `ANTHROPIC_API_KEY`); `demo` (the default) matches keywords to account names with no API calls, and every suggestion it makes is labelled "Demo suggestion" in the UI so it's never mistaken for AI; `disabled` skips the stage. Tests run with `disabled` and opt in.
+- **Batch inside the chain**: rules leave some transactions uncategorized, and only then is it known what to send. `QueueAiSuggestions` chunks those ids and calls `prependToChain(Bus::batch(...))`, so the batch runs on the `ai` queue and `FinalizeImport` is dispatched from the batch's `finally` callback. The batch `allowFailures()`: a chunk that fails just leaves its transactions for manual review.
+- **Request shape**: system prompt = instructions + the client's chart of accounts + up to 20 recent approved payee→code examples, marked `cache_control: ephemeral` (identical for every chunk of an import). User message = the chunk's transactions as JSON lines. Response is constrained with a JSON schema through Prism's native `output_config.format` strategy (no forced tool use, which current Claude models reject). No sampling parameters are sent.
+- **Never trust the output**: suggestions for transaction ids outside the chunk or account codes not in the client's active chart are dropped; confidence is clamped to 0–100; the job re-checks status before sending, and `CategorizationService::suggest()` only touches `uncategorized` transactions. Suggestions are stored as `suggested` and are never auto-approved.
+- **Rate limits and retries**: `RateLimited('ai-categorization')` (requests/minute shared across workers) plus `ThrottlesExceptions` for provider rate-limit/overload/5xx errors; chunks keep retrying for 15 minutes (`retryUntil`), then fail into Horizon.
+- **Cost visibility**: each import records `ai_model`, `ai_input_tokens`, `ai_output_tokens` and `ai_suggested_rows`.
+- **Model**: `AI_MODEL` defaults to `claude-opus-5-5`. Known gaps from going through Prism rather than the official SDK: effort can't be set (Opus 5.5 defaults to `medium`), and the server-side refusal `fallbacks` parameter isn't available. A refusal or empty response simply yields no suggestions for that chunk.

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Categorization\Ai\DemoCategorizer;
 use App\Models\Import;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -28,6 +29,11 @@ class ImportResource extends JsonResource
             'duplicate_rows' => $this->duplicate_rows,
             'failed_rows' => $this->failed_rows,
             'categorized_rows' => $this->categorized_rows,
+            'ai_suggested_rows' => $this->ai_suggested_rows,
+            'ai_model' => $this->ai_model,
+            'ai_is_demo' => $this->ai_model === DemoCategorizer::MODEL,
+            'ai_input_tokens' => $this->ai_input_tokens,
+            'ai_output_tokens' => $this->ai_output_tokens,
             'error' => $this->error,
             'uploaded_by' => $this->whenLoaded('user', fn () => $this->user?->name),
             'created_at' => $this->created_at?->toIso8601String(),

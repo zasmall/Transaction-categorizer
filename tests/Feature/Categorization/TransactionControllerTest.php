@@ -6,6 +6,7 @@ use App\Models\BankAccount;
 use App\Models\CategorizationRule;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\CategorizationService;
 use App\Services\ClientOnboardingService;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -133,4 +134,30 @@ test('another client\'s transaction is not reachable through this client', funct
     $this->actingAs($this->user)
         ->patch(route('clients.transactions.update', [$this->client, $foreign]), ['account_id' => $this->meals->id])
         ->assertNotFound();
+});
+
+test('a suggestion can be approved as-is, recorded as the person\'s decision', function () {
+    $transaction = txn();
+    app(CategorizationService::class)->suggest($transaction, $this->meals, 80, 'Coffee shop', 'claude-opus-5-5');
+
+    $this->actingAs($this->user)
+        ->get(route('clients.transactions.index', [$this->client, 'status' => 'suggested']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('transactions.data.0.explanation', 'AI suggestion (80% confident)')
+            ->where('transactions.data.0.ai_reason', 'Coffee shop'));
+
+    $this->actingAs($this->user)
+        ->post(route('clients.transactions.approve', [$this->client, $transaction]))
+        ->assertInertiaFlash('toast.message', 'Approved as Meals.');
+
+    expect($transaction->refresh()->categorization_status)->toBe(CategorizationStatus::Approved)
+        ->and($transaction->account_id)->toBe($this->meals->id)
+        ->and($transaction->currentCategorization->method)->toBe(CategorizationMethod::Manual)
+        ->and($transaction->categorizations()->count())->toBe(2);
+});
+
+test('only suggested transactions can be approved', function () {
+    $this->actingAs($this->user)
+        ->post(route('clients.transactions.approve', [$this->client, txn()]))
+        ->assertStatus(422);
 });

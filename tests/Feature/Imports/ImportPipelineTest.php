@@ -11,6 +11,7 @@ use App\Jobs\Imports\FinalizeImport;
 use App\Jobs\Imports\NormalizeImportRows;
 use App\Jobs\Imports\ParseImportFile;
 use App\Jobs\Imports\PersistImportedTransactions;
+use App\Jobs\Imports\QueueAiSuggestions;
 use App\Models\BankAccount;
 use App\Models\Import;
 use App\Models\ImportProfile;
@@ -208,6 +209,7 @@ test('the pipeline is queued as a chain on the imports queue', function () {
         NormalizeImportRows::class,
         PersistImportedTransactions::class,
         ApplyCategorizationRules::class,
+        QueueAiSuggestions::class,
         FinalizeImport::class,
     ]);
 

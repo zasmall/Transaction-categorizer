@@ -57,6 +57,7 @@ const stages: { status: ImportStatus; label: string }[] = [
     { status: 'normalizing', label: 'Clean up rows' },
     { status: 'persisting', label: 'Save & de-duplicate' },
     { status: 'categorizing', label: 'Apply rules' },
+    { status: 'suggesting', label: 'AI suggestions' },
     { status: 'completed', label: 'Done' },
 ];
 
@@ -66,6 +67,7 @@ const order: ImportStatus[] = [
     'normalizing',
     'persisting',
     'categorizing',
+    'suggesting',
     'completed',
 ];
 
@@ -129,7 +131,10 @@ function rawSummary(row: ImportRow): string {
 
         <ClientNav :client="client" />
 
-        <ol class="grid gap-3 sm:grid-cols-5" aria-label="Import progress">
+        <ol
+            class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6"
+            aria-label="Import progress"
+        >
             <li
                 v-for="stage in stages"
                 :key="stage.status"
@@ -167,7 +172,7 @@ function rawSummary(row: ImportRow): string {
             <AlertDescription>{{ statementImport.error }}</AlertDescription>
         </Alert>
 
-        <dl class="grid grid-cols-2 gap-3 sm:grid-cols-6">
+        <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <div class="rounded-lg border p-3">
                 <dt class="text-xs text-muted-foreground">Status</dt>
                 <dd class="mt-1">
@@ -203,6 +208,18 @@ function rawSummary(row: ImportRow): string {
                 </dd>
             </div>
             <div class="rounded-lg border p-3">
+                <dt class="text-xs text-muted-foreground">
+                    {{
+                        statementImport.ai_is_demo
+                            ? 'Demo suggestions'
+                            : 'AI suggestions'
+                    }}
+                </dt>
+                <dd class="mt-1 text-xl font-semibold tabular-nums">
+                    {{ statementImport.ai_suggested_rows }}
+                </dd>
+            </div>
+            <div class="rounded-lg border p-3">
                 <dt class="text-xs text-muted-foreground">Failed rows</dt>
                 <dd
                     class="mt-1 text-xl font-semibold tabular-nums"
@@ -215,6 +232,23 @@ function rawSummary(row: ImportRow): string {
                 </dd>
             </div>
         </dl>
+
+        <p
+            v-if="statementImport.ai_model"
+            class="-mt-3 text-xs text-muted-foreground"
+        >
+            <template v-if="statementImport.ai_is_demo">
+                Suggestions came from demo mode (keyword matching, no AI). Set
+                AI_CATEGORIZER=anthropic and an API key to use Claude.
+            </template>
+            <template v-else>
+                Suggested by {{ statementImport.ai_model }} ·
+                {{ statementImport.ai_input_tokens.toLocaleString() }} input /
+                {{ statementImport.ai_output_tokens.toLocaleString() }} output
+                tokens. Suggestions wait for review; none are approved
+                automatically.
+            </template>
+        </p>
 
         <section v-if="rows.length > 0" class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">

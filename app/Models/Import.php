@@ -28,6 +28,10 @@ use Illuminate\Support\Carbon;
  * @property int $duplicate_rows
  * @property int $failed_rows
  * @property int $categorized_rows Transactions categorized by rules during this import.
+ * @property int $ai_suggested_rows Transactions the AI suggested an account for.
+ * @property string|null $ai_model
+ * @property int $ai_input_tokens
+ * @property int $ai_output_tokens
  * @property string|null $error
  * @property Carbon|null $started_at
  * @property Carbon|null $finished_at
@@ -36,7 +40,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'bank_account_id', 'import_profile_id', 'user_id', 'original_filename', 'stored_path', 'file_hash',
-    'status', 'total_rows', 'imported_rows', 'duplicate_rows', 'failed_rows', 'categorized_rows', 'error', 'started_at', 'finished_at',
+    'status', 'total_rows', 'imported_rows', 'duplicate_rows', 'failed_rows', 'categorized_rows', 'ai_suggested_rows', 'ai_model', 'ai_input_tokens', 'ai_output_tokens', 'error', 'started_at', 'finished_at',
 ])]
 class Import extends Model
 {
@@ -57,6 +61,9 @@ class Import extends Model
             'duplicate_rows' => 'integer',
             'failed_rows' => 'integer',
             'categorized_rows' => 'integer',
+            'ai_suggested_rows' => 'integer',
+            'ai_input_tokens' => 'integer',
+            'ai_output_tokens' => 'integer',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

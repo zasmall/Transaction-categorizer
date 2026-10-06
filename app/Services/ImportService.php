@@ -9,6 +9,7 @@ use App\Jobs\Imports\ImportStage;
 use App\Jobs\Imports\NormalizeImportRows;
 use App\Jobs\Imports\ParseImportFile;
 use App\Jobs\Imports\PersistImportedTransactions;
+use App\Jobs\Imports\QueueAiSuggestions;
 use App\Models\BankAccount;
 use App\Models\Import;
 use App\Models\User;
@@ -70,6 +71,7 @@ class ImportService
             new NormalizeImportRows($import),
             new PersistImportedTransactions($import),
             new ApplyCategorizationRules($import),
+            new QueueAiSuggestions($import),
             new FinalizeImport($import),
         ])
             ->onQueue(ImportStage::QUEUE)

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Categorization\Ai\DemoCategorizer;
 use App\Enums\CategorizationMethod;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -87,7 +88,10 @@ class Categorization extends Model
         return match ($this->method) {
             CategorizationMethod::Rule => 'Rule: '.($this->rule_name ?? 'deleted rule'),
             CategorizationMethod::Manual => 'Manual: '.($this->user->name ?? 'unknown user'),
-            CategorizationMethod::Ai => sprintf('AI suggestion (%d%% confident)', $this->confidence ?? 0),
+            CategorizationMethod::Ai => sprintf(
+                $this->model === DemoCategorizer::MODEL ? 'Demo suggestion (%d%% confident)' : 'AI suggestion (%d%% confident)',
+                $this->confidence ?? 0,
+            ),
         };
     }
 }
