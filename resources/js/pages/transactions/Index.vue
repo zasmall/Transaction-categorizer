@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { Head, Link, router, setLayoutProps, usePage } from '@inertiajs/vue3';
-import { Check, Sparkles, X } from '@lucide/vue';
-import { computed, ref } from 'vue';
-import AccountSelect from '@/components/AccountSelect.vue';
+import { Head, Link, setLayoutProps } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import ClientNav from '@/components/clients/ClientNav.vue';
 import Heading from '@/components/Heading.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import CategorizeCell from '@/components/transactions/CategorizeCell.vue';
+import RuleSuggestionBanner from '@/components/transactions/RuleSuggestionBanner.vue';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 import { dashboard } from '@/routes';
-import { create as createRule } from '@/routes/clients/rules';
-import { approve, index, update } from '@/routes/clients/transactions';
+import { useCategorize } from '@/composables/useCategorize';
+import { index } from '@/routes/clients/transactions';
 import type {
     AccountOption,
     CategorizationStatus,
@@ -36,10 +34,6 @@ setLayoutProps({
     ],
 });
 
-const page = usePage();
-const suggestion = computed(() => page.flash.ruleSuggestion);
-const dismissed = ref<string | null>(null);
-
 const filters = computed(() => {
     const total = Object.values(props.counts).reduce((sum, n) => sum + n, 0);
 
@@ -63,36 +57,9 @@ const filters = computed(() => {
     ];
 });
 
-const saving = ref<number | null>(null);
-
-function approveSuggestion(transaction: TransactionRow) {
-    router.post(
-        approve.url([props.client.slug, transaction.id]),
-        {},
-        {
-            preserveScroll: true,
-            onStart: () => (saving.value = transaction.id),
-            onFinish: () => (saving.value = null),
-        },
-    );
-}
-
-function categorize(transaction: TransactionRow, accountId: number | null) {
-    if (accountId === null || accountId === transaction.account_id) {
-        return;
-    }
-
-    dismissed.value = null;
-    router.patch(
-        update.url([props.client.slug, transaction.id]),
-        { account_id: accountId },
-        {
-            preserveScroll: true,
-            onStart: () => (saving.value = transaction.id),
-            onFinish: () => (saving.value = null),
-        },
-    );
-}
+const { saving, categorize, approveSuggestion } = useCategorize(
+    props.client.slug,
+);
 </script>
 
 <template>
@@ -106,53 +73,7 @@ function categorize(transaction: TransactionRow, accountId: number | null) {
 
         <ClientNav :client="client" />
 
-        <Alert
-            v-if="suggestion && dismissed !== suggestion.payee"
-            class="border-primary/40"
-        >
-            <Sparkles />
-            <AlertTitle>Turn this into a rule?</AlertTitle>
-            <AlertDescription>
-                <p>
-                    Always put payees containing
-                    <strong>“{{ suggestion.payee }}”</strong> in
-                    <strong>{{ suggestion.account }}</strong
-                    >.
-                    <template v-if="suggestion.similar > 0">
-                        It would also categorize {{ suggestion.similar }} other
-                        {{
-                            suggestion.similar === 1
-                                ? 'transaction'
-                                : 'transactions'
-                        }}
-                        right now.
-                    </template>
-                </p>
-                <div class="mt-3 flex gap-2">
-                    <Button size="sm" as-child>
-                        <Link
-                            :href="
-                                createRule(client.slug, {
-                                    query: {
-                                        payee: suggestion.payee,
-                                        account_id: suggestion.account_id,
-                                    },
-                                })
-                            "
-                        >
-                            Create rule
-                        </Link>
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="ghost"
-                        @click="dismissed = suggestion.payee"
-                    >
-                        <X /> Not now
-                    </Button>
-                </div>
-            </AlertDescription>
-        </Alert>
+        <RuleSuggestionBanner :client="client" />
 
         <div
             class="flex flex-wrap gap-1"
@@ -226,50 +147,15 @@ function categorize(transaction: TransactionRow, accountId: number | null) {
                             {{ transaction.amount }}
                         </td>
                         <td class="px-4 py-3">
-                            <AccountSelect
-                                :model-value="transaction.account_id"
+                            <CategorizeCell
+                                :transaction="transaction"
                                 :accounts="accounts"
-                                :disabled="saving === transaction.id"
-                                :aria-label="`Account for ${transaction.payee}`"
-                                @update:model-value="
+                                :busy="saving === transaction.id"
+                                @categorize="
                                     (id) => categorize(transaction, id)
                                 "
+                                @approve="approveSuggestion(transaction)"
                             />
-                            <div
-                                class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"
-                            >
-                                <Badge
-                                    v-if="
-                                        transaction.status === 'uncategorized'
-                                    "
-                                    variant="outline"
-                                    >Uncategorized</Badge
-                                >
-                                <Badge
-                                    v-else-if="
-                                        transaction.status === 'suggested'
-                                    "
-                                    class="border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    >Needs review</Badge
-                                >
-                                {{ transaction.explanation }}
-                                <Button
-                                    v-if="transaction.status === 'suggested'"
-                                    size="sm"
-                                    variant="outline"
-                                    class="ml-auto h-6 px-2 text-xs"
-                                    :disabled="saving === transaction.id"
-                                    @click="approveSuggestion(transaction)"
-                                >
-                                    <Check /> Approve
-                                </Button>
-                            </div>
-                            <p
-                                v-if="transaction.ai_reason"
-                                class="mt-1 text-xs text-muted-foreground italic"
-                            >
-                                “{{ transaction.ai_reason }}”
-                            </p>
                         </td>
                     </tr>
                 </tbody>

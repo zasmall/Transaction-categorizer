@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
-import { Pencil, Play, Plus, Trash2 } from '@lucide/vue';
+import { Lightbulb, Pencil, Play, Plus, Trash2 } from '@lucide/vue';
 import CategorizationRuleController from '@/actions/App/Http/Controllers/CategorizationRuleController';
 import ClientNav from '@/components/clients/ClientNav.vue';
 import Heading from '@/components/Heading.vue';
@@ -8,13 +8,30 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/format';
 import { dashboard } from '@/routes';
-import { create, destroy, edit, index } from '@/routes/clients/rules';
+import { create, destroy, edit, index, learned } from '@/routes/clients/rules';
 import type { CategorizationRule, ClientSummary } from '@/types';
 
 const props = defineProps<{
     client: ClientSummary;
     rules: CategorizationRule[];
+    learnedRules: LearnedRuleSuggestion[];
+    minApprovals: number;
 }>();
+
+type LearnedRuleSuggestion = {
+    payee: string;
+    account_id: number;
+    account: string;
+    approvals: number;
+};
+
+function createLearned(suggestion: LearnedRuleSuggestion) {
+    router.post(
+        learned.url(props.client.slug),
+        { payee: suggestion.payee, account_id: suggestion.account_id },
+        { preserveScroll: true },
+    );
+}
 
 setLayoutProps({
     breadcrumbs: [
@@ -47,6 +64,38 @@ function remove(rule: CategorizationRule) {
         />
 
         <ClientNav :client="client" />
+
+        <section
+            v-if="learnedRules.length > 0"
+            class="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4"
+        >
+            <h2 class="flex items-center gap-2 text-base font-medium">
+                <Lightbulb class="size-4" /> Suggested from your approvals
+            </h2>
+            <p class="text-sm text-muted-foreground">
+                These payees were approved to the same account
+                {{ minApprovals }}+ times. A rule will handle them automatically
+                from now on.
+            </p>
+            <ul class="divide-y rounded-lg border bg-background">
+                <li
+                    v-for="suggestion in learnedRules"
+                    :key="`${suggestion.payee}-${suggestion.account_id}`"
+                    class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
+                    <span>
+                        Payee is <strong>“{{ suggestion.payee }}”</strong> →
+                        {{ suggestion.account }}
+                        <span class="text-muted-foreground"
+                            >· approved {{ suggestion.approvals }} times</span
+                        >
+                    </span>
+                    <Button size="sm" @click="createLearned(suggestion)">
+                        Create rule
+                    </Button>
+                </li>
+            </ul>
+        </section>
 
         <div class="flex flex-wrap gap-2">
             <Button as-child>
@@ -99,6 +148,11 @@ function remove(rule: CategorizationRule) {
                                 {{ rule.name }}
                                 <Badge v-if="!rule.is_active" variant="outline"
                                     >Paused</Badge
+                                >
+                                <Badge
+                                    v-if="rule.source === 'learned'"
+                                    variant="secondary"
+                                    >Learned</Badge
                                 >
                             </div>
                             <p class="text-xs text-muted-foreground">

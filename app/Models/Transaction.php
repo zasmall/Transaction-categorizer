@@ -26,12 +26,13 @@ use Illuminate\Support\Carbon;
  * @property string $fingerprint
  * @property int|null $account_id
  * @property CategorizationStatus $categorization_status
+ * @property Carbon|null $exported_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable([
     'bank_account_id', 'import_id', 'import_row_id', 'posted_on', 'amount_cents', 'description_raw',
-    'payee_normalized', 'memo', 'fingerprint', 'account_id', 'categorization_status',
+    'payee_normalized', 'memo', 'fingerprint', 'account_id', 'categorization_status', 'exported_at',
 ])]
 class Transaction extends Model
 {
@@ -49,6 +50,7 @@ class Transaction extends Model
             'posted_on' => 'date',
             'amount_cents' => 'integer',
             'categorization_status' => CategorizationStatus::class,
+            'exported_at' => 'datetime',
         ];
     }
 

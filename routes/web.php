@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\CategorizationRuleController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,8 +22,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
         Route::post('transactions/{transaction}/approve', [TransactionController::class, 'approve'])->name('transactions.approve');
 
+        Route::get('review', [ReviewController::class, 'index'])->name('review.index');
+        Route::post('review/approve', [ReviewController::class, 'approve'])->name('review.approve');
+
         Route::post('rules/apply', [CategorizationRuleController::class, 'apply'])->name('rules.apply');
+        Route::post('rules/learned', [CategorizationRuleController::class, 'storeLearned'])->name('rules.learned');
         Route::resource('rules', CategorizationRuleController::class)->except('show');
+
+        Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
+        Route::get('exports/quickbooks.csv', [ExportController::class, 'download'])->name('exports.download');
+        Route::post('exports/mark-exported', [ExportController::class, 'markExported'])->name('exports.mark');
     });
 });
 

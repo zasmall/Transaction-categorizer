@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Categorization\LearnedRuleSuggestions;
 use App\Enums\RuleDirection;
 use App\Enums\RuleMatchField;
 use App\Enums\RuleOperator;
+use App\Enums\RuleSource;
 use App\Http\Requests\Rules\CategorizationRuleRequest;
 use App\Http\Resources\CategorizationRuleResource;
 use App\Models\CategorizationRule;
@@ -19,12 +21,14 @@ use Inertia\Response;
 
 class CategorizationRuleController extends Controller
 {
-    public function index(Client $client): Response
+    public function index(Client $client, LearnedRuleSuggestions $learnedRules): Response
     {
         Gate::authorize('view', $client);
 
         return Inertia::render('rules/Index', [
             'client' => $client->only('name', 'slug'),
+            'learnedRules' => $learnedRules->for($client),
+            'minApprovals' => LearnedRuleSuggestions::MIN_APPROVALS,
             'rules' => CategorizationRuleResource::collection(
                 $client->rules()->with('account')->orderBy('priority')->orderBy('id')->get(),
             )->resolve(),
@@ -97,6 +101,46 @@ class CategorizationRuleController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Rule deleted.')]);
 
         return to_route('clients.rules.index', $client);
+    }
+
+    /**
+     * Turn a learned-rule suggestion into a rule. The suggestion is looked up again
+     * rather than trusting the request, so only genuine candidates become rules.
+     */
+    public function storeLearned(Request $request, Client $client, LearnedRuleSuggestions $learnedRules, CategorizationService $categorizer): RedirectResponse
+    {
+        Gate::authorize('view', $client);
+
+        $validated = $request->validate([
+            'payee' => ['required', 'string', 'max:255'],
+            'account_id' => ['required', 'integer'],
+        ]);
+
+        $candidate = $learnedRules->for($client)->first(fn (array $candidate) => $candidate['account_id'] === (int) $validated['account_id']
+            && mb_strtolower($candidate['payee']) === mb_strtolower($validated['payee']));
+
+        abort_if($candidate === null, 422, 'That suggestion is no longer available.');
+
+        $client->rules()->create([
+            'name' => $candidate['payee'],
+            'match_field' => RuleMatchField::Payee,
+            'operator' => RuleOperator::Equals,
+            'pattern' => $candidate['payee'],
+            'direction' => RuleDirection::Any,
+            'account_id' => $candidate['account_id'],
+            'source' => RuleSource::Learned,
+            'priority' => 100,
+            'is_active' => true,
+        ]);
+
+        $count = $categorizer->applyRules($client, $client->transactions()->getQuery());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Rule created from :payee.', ['payee' => $candidate['payee']]).' '.trans_choice(
+            '{0} No other transactions needed it yet.|{1} It categorized 1 more transaction.|[2,*] It categorized :count more transactions.',
+            $count,
+        )]);
+
+        return back();
     }
 
     /**

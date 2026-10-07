@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { ListChecks, Receipt, Upload } from '@lucide/vue';
+import {
+    ClipboardCheck,
+    FileDown,
+    ListChecks,
+    Receipt,
+    Upload,
+} from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { cn } from '@/lib/utils';
+import { index as exportsIndex } from '@/routes/clients/exports';
 import { index as importsIndex } from '@/routes/clients/imports';
+import { index as reviewIndex } from '@/routes/clients/review';
 import { index as rulesIndex } from '@/routes/clients/rules';
 import { index as transactionsIndex } from '@/routes/clients/transactions';
 import type { ClientSummary } from '@/types';
@@ -17,16 +25,25 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 const tabs = [
     { title: 'Imports', href: importsIndex(props.client.slug), icon: Upload },
     {
+        title: 'Review',
+        href: reviewIndex(props.client.slug),
+        icon: ClipboardCheck,
+    },
+    {
         title: 'Transactions',
         href: transactionsIndex(props.client.slug),
         icon: Receipt,
     },
     { title: 'Rules', href: rulesIndex(props.client.slug), icon: ListChecks },
+    { title: 'Export', href: exportsIndex(props.client.slug), icon: FileDown },
 ];
 </script>
 
 <template>
-    <nav class="flex gap-1 border-b" :aria-label="`${client.name} sections`">
+    <nav
+        class="flex gap-1 overflow-x-auto border-b"
+        :aria-label="`${client.name} sections`"
+    >
         <Link
             v-for="tab in tabs"
             :key="tab.title"
