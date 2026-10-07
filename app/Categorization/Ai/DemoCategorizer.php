@@ -87,7 +87,7 @@ class DemoCategorizer implements AiCategorizer
                     $transaction->id,
                     $account->code,
                     60,
-                    "Demo mode: matched the keyword \"{$match[0]}\".",
+                    "Demo mode: matched the keyword “{$match[0]}”.",
                 );
             }
         }

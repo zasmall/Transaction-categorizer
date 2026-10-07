@@ -6,6 +6,8 @@ Built with Laravel 13, Vue 3 + Inertia, Redis + Horizon, and Claude (via Prism o
 
 **Try it locally:** follow [Running locally](#running-locally), then log in as `demo@example.com` / `password`. The demo comes with two clients, a quarter of statements already imported, and work waiting in the review queue.
 
+![Review queue: least certain first, with a rule suggested from a manual correction](docs/screenshots/review.png)
+
 ## What it does
 
 - **Imports statements from different banks.** Each bank account has an import profile describing its CSV layout: column names, date format, and how it signs amounts (one signed column, inverted signs like Amex, or separate debit/credit columns like Capital One). Real-world quirks are handled: byte-order marks, trailing delimiters, overlapping statement periods.
@@ -16,6 +18,17 @@ Built with Laravel 13, Vue 3 + Inertia, Redis + Horizon, and Claude (via Prism o
 - **Explains every decision.** An append-only history records who or what categorized each transaction and why ("Rule: Coffee shops", "Manual: Demo Bookkeeper", "AI suggestion (92% confident)").
 - **Exports to QuickBooks Online** as balanced journal entries, with a separate "mark as exported" step so nothing goes out twice.
 - **Multi-client.** A bookkeeper can manage many clients; owners manage a client's setup, bookkeepers do the day-to-day work.
+
+## Screenshots
+
+|                                                                                                                                                               |                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| ![An import, stage by stage, with a bad row set aside and its reason](docs/screenshots/import.png)                                                            | ![Horizon showing the pipeline jobs tagged by import and client](docs/screenshots/horizon.png)          |
+| **Import:** each stage of the pipeline, new vs duplicate vs failed rows, and why a row failed.                                                                | **Horizon:** the same import's jobs on the `imports` and `ai` queues, tagged `import:7` and `client:1`. |
+| ![Suggestions waiting for review, each with a confidence and a reason](docs/screenshots/transactions.png)                                                     | ![Rules, including one suggested from repeated approvals](docs/screenshots/rules.png)                   |
+| **Suggestions:** each one shows the account, its confidence and the reason, with one-click approve. (Demo mode here; with an API key these come from Claude.) | **Rules:** priority, matches and hit counts, plus a rule suggested from four identical approvals.       |
+| ![QuickBooks export preview for February](docs/screenshots/export.png)                                                                                        | ![Landing page](docs/screenshots/landing.png)                                                           |
+| **Export:** what's ready, what still needs review, and a separate "mark as exported" step.                                                                    | **Landing page** with the demo login.                                                                   |
 
 ## How an import works
 

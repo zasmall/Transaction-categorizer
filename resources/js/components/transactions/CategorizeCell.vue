@@ -28,7 +28,9 @@ const emit = defineEmits<{
         :aria-label="`Account for ${transaction.payee}`"
         @update:model-value="(id) => emit('categorize', id)"
     />
-    <div class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div
+        class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground"
+    >
         <Badge v-if="transaction.status === 'uncategorized'" variant="outline"
             >Uncategorized</Badge
         >
@@ -37,7 +39,7 @@ const emit = defineEmits<{
             class="border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
             >Needs review</Badge
         >
-        {{ transaction.explanation }}
+        <span class="whitespace-nowrap">{{ transaction.explanation }}</span>
         <Button
             v-if="transaction.status === 'suggested'"
             size="sm"
@@ -53,6 +55,6 @@ const emit = defineEmits<{
         v-if="transaction.ai_reason"
         class="mt-1 text-xs text-muted-foreground italic"
     >
-        “{{ transaction.ai_reason }}”
+        {{ transaction.ai_reason }}
     </p>
 </template>
