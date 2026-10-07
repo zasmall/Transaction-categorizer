@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use Anthropic\Client as AnthropicClient;
 use App\Categorization\Ai\AiCategorizer;
-use App\Categorization\Ai\ClaudeCategorizer;
 use App\Categorization\Ai\DemoCategorizer;
+use App\Categorization\Ai\PrismClaudeCategorizer;
+use App\Categorization\Ai\SdkClaudeCategorizer;
 use App\Imports\Parsing\CsvParser;
 use App\Imports\Parsing\ParserRegistry;
 use App\Jobs\Imports\SuggestCategoriesForChunk;
@@ -29,8 +31,18 @@ class AppServiceProvider extends ServiceProvider
             'csv' => $app->make(CsvParser::class),
         ]));
 
+        $this->app->bind(AnthropicClient::class, fn () => new AnthropicClient(
+            apiKey: (string) config('categorization.ai.api_key'),
+        ));
+
         $this->app->bind(AiCategorizer::class, fn () => match (config('categorization.ai.driver')) {
-            'anthropic' => new ClaudeCategorizer(
+            'prism' => new PrismClaudeCategorizer(
+                model: (string) config('categorization.ai.model'),
+                maxTokens: (int) config('categorization.ai.max_tokens'),
+                timeoutSeconds: (int) config('categorization.ai.timeout_seconds'),
+            ),
+            'sdk' => new SdkClaudeCategorizer(
+                anthropic: $this->app->make(AnthropicClient::class),
                 model: (string) config('categorization.ai.model'),
                 maxTokens: (int) config('categorization.ai.max_tokens'),
                 timeoutSeconds: (int) config('categorization.ai.timeout_seconds'),

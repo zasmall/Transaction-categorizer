@@ -2,7 +2,7 @@
 
 A bookkeeping tool that turns client bank and credit card statements into categorized, QuickBooks-ready books. Statements go through a queued import pipeline; deterministic rules categorize what they can, Claude suggests accounts for the rest, and a person approves everything before it's exported.
 
-Built with Laravel 13, Vue 3 + Inertia, Redis + Horizon, and Claude (via Prism).
+Built with Laravel 13, Vue 3 + Inertia, Redis + Horizon, and Claude (via Prism or the official Anthropic PHP SDK, your choice).
 
 **Try it locally:** follow [Running locally](#running-locally), then log in as `demo@example.com` / `password`. The demo comes with two clients, a quarter of statements already imported, and work waiting in the review queue.
 
@@ -49,7 +49,8 @@ The full data model and implementation notes are in [docs/architecture.md](docs/
 - **Fingerprints use the raw description plus an occurrence index**, not the cleaned payee, so improving the payee clean-up never changes existing fingerprints, and same-day duplicates within one file stay distinct.
 - **One writer for categorizations.** `CategorizationService` appends to the history, keeps exactly one current decision per transaction, refuses another client's accounts, and enforces precedence: a person beats a rule, a rule beats an AI suggestion.
 - **AI output is never trusted blindly.** Suggestions for transactions outside the request or account codes that don't exist in the client's chart are dropped. Nothing the AI says is approved automatically.
-- **AI calls are bounded.** Chunks are rate limited across all workers and retry through provider rate limits and outages with backoff. The chart of accounts and examples sit in a cached system prompt shared by every chunk of an import.
+- **AI calls are bounded.** Chunks are rate limited across all workers and retry through provider rate limits and outages with backoff. The SDK's own retries are switched off so there's exactly one retry policy, owned by the queue. The chart of accounts and examples sit in a cached system prompt shared by every chunk of an import.
+- **The AI provider is swappable.** Categorizers implement one interface; the Prism and official-SDK versions share the prompt, schema and parsing, so switching is a config change.
 - **Exports have no side effects.** Downloading is a plain GET; marking a batch as exported is a deliberate step taken after QuickBooks accepts the file, so a failed import can just be downloaded again.
 - **Tenancy is explicit.** Client-owned models share a `BelongsToClient` trait with a `forClient()` scope, routes use scoped bindings (`/clients/{client}/rules/{rule}` 404s for another client's rule), and a policy separates owners from bookkeepers.
 
@@ -74,13 +75,16 @@ Sample statements live in [`database/seeders/statements/`](database/seeders/stat
 
 ### AI configuration
 
-| `AI_CATEGORIZER` | What happens                                                                                                   |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| `demo` (default) | Keyword matching, no API calls. Every suggestion is labelled "Demo suggestion" so it can't be mistaken for AI. |
-| `anthropic`      | Suggestions from Claude. Set `ANTHROPIC_API_KEY`; `AI_MODEL` defaults to `claude-opus-5-5`.                    |
-| `disabled`       | Skip the AI stage; anything rules miss goes straight to review.                                                |
+| `AI_CATEGORIZER` | What happens                                                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `demo` (default) | Keyword matching, no API calls. Every suggestion is labelled "Demo suggestion" so it can't be mistaken for AI.               |
+| `prism`          | Claude through [Prism](https://prismphp.com), Laravel's provider-agnostic LLM package. Needs `ANTHROPIC_API_KEY`.            |
+| `sdk`            | Claude through the official [Anthropic PHP SDK](https://github.com/anthropics/anthropic-sdk-php). Needs `ANTHROPIC_API_KEY`. |
+| `disabled`       | Skip the AI stage; anything rules miss goes straight to review.                                                              |
 
-Seeding always uses the demo categorizer, so it never spends money.
+The two Claude drivers send exactly the same prompt and JSON schema (`CategorizationPrompt`) and differ only in transport, so they can be compared side by side. `AI_MODEL` defaults to `claude-haiku-4-5`, the least expensive current model: picking an account from a short list is a simple, high-volume task.
+
+Seeding always uses the demo categorizer, so it never spends money. `php artisan demo:reset` wipes the database and uploaded files and reseeds, which is handy between demo runs.
 
 ## Testing
 
@@ -90,7 +94,7 @@ npm run check          # lint and formatting (Vite+)
 npm run types:check    # vue-tsc
 ```
 
-The Pest suite covers the parsers against anonymized fixtures from each bank format, money parsing, payee clean-up, fingerprinting, the full pipeline (including retries, duplicates, wrong-format files and unexpected failures), rule matching, the AI stage against Prism's fake (including invented account codes), tenancy and authorization on every route, and the export's debit/credit balance. Tests run with the `sync` queue and AI disabled unless a test opts in.
+The Pest suite covers the parsers against anonymized fixtures from each bank format, money parsing, payee clean-up, fingerprinting, the full pipeline (including retries, duplicates, wrong-format files and unexpected failures), rule matching, the AI stage against Prism's fake and against the real Anthropic SDK with a fake HTTP transport (including invented account codes, refusals and non-retried errors), tenancy and authorization on every route, and the export's debit/credit balance. Tests run with the `sync` queue and AI disabled unless a test opts in.
 
 ## Project layout
 

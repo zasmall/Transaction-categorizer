@@ -28,7 +28,7 @@ use Prism\Prism\ValueObjects\Usage;
 beforeEach(function () {
     Storage::fake('local');
     $this->seed(ImportProfileSeeder::class);
-    config(['categorization.ai.driver' => 'anthropic', 'categorization.ai.model' => 'claude-opus-5-5']);
+    config(['categorization.ai.driver' => 'prism', 'categorization.ai.model' => 'claude-haiku-4-5']);
 
     $this->user = User::factory()->create();
     $this->client = app(ClientOnboardingService::class)->create($this->user, 'Northwind Coffee Co.');
@@ -69,7 +69,7 @@ test('transactions rules miss get validated AI suggestions, then the import fina
     // then run the AI stage and finalize as a real chain.
     config(['categorization.ai.driver' => 'disabled']);
     $import = importChase();
-    config(['categorization.ai.driver' => 'anthropic']);
+    config(['categorization.ai.driver' => 'prism']);
 
     Prism::fake([claudeReplies([
         ['transaction_id' => txnId('Adobe Creative Cld'), 'account_code' => '6500', 'confidence' => 92, 'reason' => 'Design software subscription'],
@@ -85,7 +85,7 @@ test('transactions rules miss get validated AI suggestions, then the import fina
     expect($import->status)->toBe(ImportStatus::CompletedWithErrors)
         ->and($import->categorized_rows)->toBe(2)
         ->and($import->ai_suggested_rows)->toBe(2)
-        ->and($import->ai_model)->toBe('claude-opus-5-5')
+        ->and($import->ai_model)->toBe('claude-haiku-4-5')
         ->and($import->ai_input_tokens)->toBe(1200)
         ->and($import->ai_output_tokens)->toBe(300);
 
@@ -95,7 +95,7 @@ test('transactions rules miss get validated AI suggestions, then the import fina
         ->and($adobe->currentCategorization->method)->toBe(CategorizationMethod::Ai)
         ->and($adobe->currentCategorization->confidence)->toBe(92)
         ->and($adobe->currentCategorization->ai_reason)->toBe('Design software subscription')
-        ->and($adobe->currentCategorization->model)->toBe('claude-opus-5-5')
+        ->and($adobe->currentCategorization->model)->toBe('claude-haiku-4-5')
         ->and($adobe->currentCategorization->explanation())->toBe('AI suggestion (92% confident)');
 
     // An invented account code is dropped; the transaction waits for a person instead.
@@ -123,7 +123,7 @@ test('the request sends the chart, examples and transactions with a cached syste
         $request = $requests[0];
         $system = $request->systemPrompts()[0];
 
-        expect($request->model())->toBe('claude-opus-5-5')
+        expect($request->model())->toBe('claude-haiku-4-5')
             ->and($request->maxTokens())->toBe(16000)
             ->and($request->temperature())->toBeNull()
             ->and($system->providerOptions('cacheType'))->toBe('ephemeral')

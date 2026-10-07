@@ -239,7 +239,7 @@ function rawSummary(row: ImportRow): string {
         >
             <template v-if="statementImport.ai_is_demo">
                 Suggestions came from demo mode (keyword matching, no AI). Set
-                AI_CATEGORIZER=anthropic and an API key to use Claude.
+                AI_CATEGORIZER to prism or sdk, plus an API key, to use Claude.
             </template>
             <template v-else>
                 Suggested by {{ statementImport.ai_model }} ·

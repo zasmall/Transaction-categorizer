@@ -29,7 +29,7 @@ function queued(string $payee, ?int $confidence = null, array $attributes = []):
     ]);
 
     if ($confidence !== null) {
-        test()->service->suggest($transaction, test()->meals, $confidence, 'Because', 'claude-opus-5-5');
+        test()->service->suggest($transaction, test()->meals, $confidence, 'Because', 'claude-haiku-4-5');
     }
 
     return $transaction->refresh();
@@ -73,7 +73,7 @@ test('selected suggestions can be approved in bulk', function () {
 test('bulk approve ignores other clients\' transactions', function () {
     $other = app(ClientOnboardingService::class)->create($this->user, 'Other Client');
     $foreign = Transaction::factory()->for(BankAccount::factory()->for($other))->create(['client_id' => $other->id]);
-    app(CategorizationService::class)->suggest($foreign, $other->accounts()->first(), 90, 'x', 'claude-opus-5-5');
+    app(CategorizationService::class)->suggest($foreign, $other->accounts()->first(), 90, 'x', 'claude-haiku-4-5');
 
     $this->actingAs($this->user)
         ->post(route('clients.review.approve', $this->client), ['transaction_ids' => [$foreign->id]])

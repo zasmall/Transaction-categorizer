@@ -17,13 +17,13 @@ use Prism\Prism\Facades\Prism;
 beforeEach(fn () => Storage::fake('local'));
 
 test('the database seeder builds a usable demo without calling any AI service', function () {
-    config(['categorization.ai.driver' => 'anthropic']);
+    config(['categorization.ai.driver' => 'prism']);
     $prism = Prism::fake();
 
     $this->seed(DatabaseSeeder::class);
 
     $prism->assertCallCount(0);
-    expect(config('categorization.ai.driver'))->toBe('anthropic')
+    expect(config('categorization.ai.driver'))->toBe('prism')
         ->and(config('queue.default'))->toBe('sync');
 
     $demo = User::where('email', DemoSeeder::DEMO_EMAIL)->firstOrFail();

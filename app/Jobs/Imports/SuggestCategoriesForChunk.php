@@ -2,6 +2,9 @@
 
 namespace App\Jobs\Imports;
 
+use Anthropic\Core\Exceptions\APIConnectionException;
+use Anthropic\Core\Exceptions\InternalServerException;
+use Anthropic\Core\Exceptions\RateLimitException;
 use App\Categorization\Ai\AiCategorizer;
 use App\Categorization\Ai\FewShotExamples;
 use App\Enums\CategorizationStatus;
@@ -57,11 +60,24 @@ class SuggestCategoriesForChunk extends ImportStage
             ...parent::middleware(),
             new RateLimited(self::RATE_LIMITER),
             (new ThrottlesExceptions(maxAttempts: 3, decaySeconds: 60))
-                ->when(fn (Throwable $e) => $e instanceof PrismRateLimitedException
-                    || $e instanceof PrismProviderOverloadedException
-                    || $e instanceof PrismServerException)
+                ->when(fn (Throwable $e) => self::isTransient($e))
                 ->backoff(1),
         ];
+    }
+
+    /**
+     * Rate limits, overloads, server errors and dropped connections are worth
+     * retrying, whichever client raised them. Anything else (a bad key, a bad
+     * request) fails the chunk straight away.
+     */
+    public static function isTransient(Throwable $e): bool
+    {
+        return $e instanceof PrismRateLimitedException
+            || $e instanceof PrismProviderOverloadedException
+            || $e instanceof PrismServerException
+            || $e instanceof RateLimitException
+            || $e instanceof InternalServerException
+            || $e instanceof APIConnectionException;
     }
 
     public function handle(AiCategorizer $categorizer, CategorizationService $categorizations): void

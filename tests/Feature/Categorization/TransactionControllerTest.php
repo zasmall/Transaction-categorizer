@@ -138,7 +138,7 @@ test('another client\'s transaction is not reachable through this client', funct
 
 test('a suggestion can be approved as-is, recorded as the person\'s decision', function () {
     $transaction = txn();
-    app(CategorizationService::class)->suggest($transaction, $this->meals, 80, 'Coffee shop', 'claude-opus-5-5');
+    app(CategorizationService::class)->suggest($transaction, $this->meals, 80, 'Coffee shop', 'claude-haiku-4-5');
 
     $this->actingAs($this->user)
         ->get(route('clients.transactions.index', [$this->client, 'status' => 'suggested']))

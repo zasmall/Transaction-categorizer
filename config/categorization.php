@@ -11,16 +11,22 @@ return [
     | account. Suggestions are never approved automatically.
     |
     | Drivers:
-    |   "anthropic" - Claude via Prism (needs ANTHROPIC_API_KEY)
-    |   "demo"      - keyword matching, no API calls; clearly labelled in the UI
-    |   "disabled"  - skip the AI stage entirely
+    |   "demo"     - keyword matching, no API calls; clearly labelled in the UI
+    |   "prism"    - Claude via Prism (needs ANTHROPIC_API_KEY)
+    |   "sdk"      - Claude via the official Anthropic PHP SDK (needs ANTHROPIC_API_KEY)
+    |   "disabled" - skip the AI stage entirely
+    |
+    | Both Claude drivers send the same prompt and schema (CategorizationPrompt).
     |
     */
 
     'ai' => [
         'driver' => env('AI_CATEGORIZER', 'demo'),
 
-        'model' => env('AI_MODEL', 'claude-opus-5-5'),
+        'api_key' => env('ANTHROPIC_API_KEY'),
+
+        // The least expensive current model; bulk categorization is a simple, high-volume task.
+        'model' => env('AI_MODEL', 'claude-haiku-4-5'),
 
         // Transactions per request, and requests per minute across all workers.
         'chunk_size' => (int) env('AI_CHUNK_SIZE', 25),
