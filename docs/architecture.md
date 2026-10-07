@@ -14,7 +14,7 @@
 
 - **imports**: `id, client_id, bank_account_id, import_profile_id, user_id, original_filename, stored_path, file_hash, status, total_rows, imported_rows, duplicate_rows, failed_rows, error, started_at, finished_at`
 - **import_rows**: `id, import_id, row_number, raw (json), normalized (json), status (pending|normalized|imported|duplicate|failed), error` — staging table; keeps original data for audit/reprocessing. `normalized` lets each stage run (and retry) independently.
-- **transactions**: `id, client_id, bank_account_id, import_id, import_row_id, posted_on (date), amount_cents (signed bigint), description_raw, payee_normalized, memo, fingerprint, account_id (nullable), categorization_status (uncategorized|suggested|approved)`
+- **transactions**: `id, client_id, bank_account_id, import_id, import_row_id, posted_on (date), amount_cents (signed bigint), description_raw, payee_normalized, memo, fingerprint, account_id (nullable), categorization_status (uncategorized|suggested|approved), exported_at (nullable)`
     - Unique index on `(bank_account_id, fingerprint)`
 
 ### Categorization
@@ -96,3 +96,11 @@ Import status: `pending → parsing → normalizing → persisting → categoriz
 - **Rate limits and retries**: `RateLimited('ai-categorization')` (requests/minute shared across workers) plus `ThrottlesExceptions` for provider rate-limit/overload/5xx errors; chunks keep retrying for 15 minutes (`retryUntil`), then fail into Horizon.
 - **Cost visibility**: each import records `ai_model`, `ai_input_tokens`, `ai_output_tokens` and `ai_suggested_rows`.
 - **Model**: `AI_MODEL` defaults to `claude-opus-5-5`. Known gaps from going through Prism rather than the official SDK: effort can't be set (Opus 5.5 defaults to `medium`), and the server-side refusal `fallbacks` parameter isn't available. A refusal or empty response simply yields no suggestions for that chunk.
+
+## Review, learned rules and export: implementation notes (Milestone 5)
+
+- **Review queue** (`ReviewController`): uncategorized and suggested transactions, ordered by the current categorization's confidence with uncategorized first (`coalesce(confidence, -1)`), then date. Bulk approve accepts up to 200 ids, re-scopes them to the client and to `suggested`, and reports anything skipped.
+- **Learned rules** (`App\Categorization\LearnedRuleSuggestions`): approved transactions grouped by `lower(payee_normalized)` and account. A payee qualifies with 3+ approvals to one account, no approvals to any other account, and no existing rule that already sends it there. Creating one makes a `source = learned`, payee-equals rule (the request is re-checked against the live suggestions) and runs rules over the backlog.
+- **QuickBooks export** (`App\Exports\QuickBooksJournalCsv`): journal entry CSV (`Journal No, Journal Date, Account Name, Debits, Credits, Description, Memo`), two lines per approved transaction. Money out debits the category and credits the bank/card ledger account; money in does the reverse. Account names use `qbo_name` when set (for sub-accounts like `Cost of Goods Sold:Ingredients & Supplies`). Streamed with `cursor()`.
+- **Export workflow**: preview, download and mark share one `ExportFilterRequest` (date range, bank account, include already-exported). Download is a side-effect-free GET; "Mark as exported" stamps `exported_at` afterwards, so a rejected file can be re-downloaded.
+- **Demo data** (`DemoSeeder` + `database/seeders/statements/`): generated, deterministic statements. Seeding imports them synchronously with the demo categorizer (never a paid API), reviews and exports Northwind's January (including a correction that becomes a learned-rule suggestion), and leaves the rest in review.
