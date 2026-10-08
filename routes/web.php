@@ -6,12 +6,14 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\WebhookReceiptController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('webhooks', [WebhookReceiptController::class, 'index'])->name('webhooks.index');
 
     Route::prefix('clients/{client:slug}')->name('clients.')->scopeBindings()->group(function () {
         Route::get('imports', [ImportController::class, 'index'])->name('imports.index');

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Activity, Building2 } from '@lucide/vue';
+import { Activity, Building2, Webhook } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,6 +15,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as webhooksIndex } from '@/routes/webhooks';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -22,6 +23,11 @@ const mainNavItems: NavItem[] = [
         title: 'Clients',
         href: dashboard(),
         icon: Building2,
+    },
+    {
+        title: 'Webhooks',
+        href: webhooksIndex(),
+        icon: Webhook,
     },
 ];
 

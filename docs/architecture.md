@@ -104,3 +104,11 @@ Import status: `pending → parsing → normalizing → persisting → categoriz
 - **QuickBooks export** (`App\Exports\QuickBooksJournalCsv`): journal entry CSV (`Journal No, Journal Date, Account Name, Debits, Credits, Description, Memo`), two lines per approved transaction. Money out debits the category and credits the bank/card ledger account; money in does the reverse. Account names use `qbo_name` when set (for sub-accounts like `Cost of Goods Sold:Ingredients & Supplies`). Streamed with `cursor()`.
 - **Export workflow**: preview, download and mark share one `ExportFilterRequest` (date range, bank account, include already-exported). Download is a side-effect-free GET; "Mark as exported" stamps `exported_at` afterwards, so a rejected file can be re-downloaded.
 - **Demo data** (`DemoSeeder` + `database/seeders/statements/`): generated, deterministic statements. Seeding imports them synchronously with the demo categorizer (never a paid API), reviews and exports Northwind's January (including a correction that becomes a learned-rule suggestion), and leaves the rest in review.
+
+## Receiving webhooks from Webhook Relay (Milestone 6)
+
+- `POST /api/webhooks/relay` lives in `routes/api.php`, so it's stateless and has no CSRF check. It's protected by the `relay.signature` middleware from the `zasmall/relay-signature` package, which verifies `X-Relay-Signature` (HMAC-SHA256 over the raw body, with a 300-second timestamp tolerance) against `RELAY_WEBHOOK_SECRET`. During a rotation, set that to a comma-separated list to accept two secrets.
+- `RelayWebhookController` validates the envelope (`id`, `type`, `data`) and `insertOrIgnore`s a `webhook_receipts` row. `event_id` is unique, so a redelivery (the relay is at-least-once) answers `200 {"duplicate": true}` and stores nothing.
+- `data` is re-encoded from the raw body as objects, so `{}` stays `{}`, both when stored and when shown on the `/webhooks` page.
+- Receipts aren't client-owned. They record what arrived; nothing acts on them yet. Turning `transaction.posted` events into real transactions (a "bank feed") would be the next step, and it would need a mapping from events to a client and bank account.
+- The package is required through a Composer **path repository** (`../webhook-relay-service/packages/relay-signature`), so it only installs where both projects are checked out side by side.
