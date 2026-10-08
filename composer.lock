@@ -8262,16 +8262,16 @@
         },
         {
             "name": "zasmall/webhook-relay-signature",
-            "version": "v0.1.0",
+            "version": "v0.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/zasmall/webhook-relay-signature.git",
-                "reference": "9bc31a7a938bbaf859ef879aebf3bfe8228c29df"
+                "reference": "4d5242336b7fa177995e0ab3d2f2776950ea87d0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/zasmall/webhook-relay-signature/zipball/9bc31a7a938bbaf859ef879aebf3bfe8228c29df",
-                "reference": "9bc31a7a938bbaf859ef879aebf3bfe8228c29df",
+                "url": "https://api.github.com/repos/zasmall/webhook-relay-signature/zipball/4d5242336b7fa177995e0ab3d2f2776950ea87d0",
+                "reference": "4d5242336b7fa177995e0ab3d2f2776950ea87d0",
                 "shasum": ""
             },
             "require": {
@@ -8315,10 +8315,10 @@
                 "webhooks"
             ],
             "support": {
-                "source": "https://github.com/zasmall/webhook-relay-signature/tree/v0.1.0",
+                "source": "https://github.com/zasmall/webhook-relay-signature/tree/v0.1.1",
                 "issues": "https://github.com/zasmall/webhook-relay-signature/issues"
             },
-            "time": "2026-10-08T17:06:51+00:00"
+            "time": "2026-10-08T19:26:50+00:00"
         }
     ],
     "packages-dev": [

@@ -129,3 +129,11 @@ docs/architecture.md   Data model, pipeline and design notes
 - Pushing to QuickBooks through its API rather than a CSV export.
 - Screens for managing clients, the chart of accounts, bank accounts and import profiles (they're created by the onboarding service and seeders today).
 - Real-time updates over websockets; the import page polls while an import runs.
+
+## License
+
+Copyright (C) 2026 ZASmall.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+If you run a modified version as a network service, the AGPL requires you to offer its source code to that service's users.
