@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4a74da1d3a2f06c37e875fd329417bff",
+    "content-hash": "d28d7cb2932fa099aa415ccac65ecf36",
     "packages": [
         {
             "name": "anthropic-ai/sdk",
@@ -8261,12 +8261,18 @@
             "time": "2026-10-05T23:14:19+00:00"
         },
         {
-            "name": "zasmall/relay-signature",
-            "version": "dev-main",
+            "name": "zasmall/webhook-relay-signature",
+            "version": "v0.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/zasmall/webhook-relay-signature.git",
+                "reference": "9bc31a7a938bbaf859ef879aebf3bfe8228c29df"
+            },
             "dist": {
-                "type": "path",
-                "url": "../webhook-relay-service/packages/relay-signature",
-                "reference": "763a94e92075933c0f1b0b4a1b2542c80f71879d"
+                "type": "zip",
+                "url": "https://api.github.com/repos/zasmall/webhook-relay-signature/zipball/9bc31a7a938bbaf859ef879aebf3bfe8228c29df",
+                "reference": "9bc31a7a938bbaf859ef879aebf3bfe8228c29df",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.3"
@@ -8308,10 +8314,11 @@
                 "signature",
                 "webhooks"
             ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/zasmall/webhook-relay-signature/tree/v0.1.0",
+                "issues": "https://github.com/zasmall/webhook-relay-signature/issues"
+            },
+            "time": "2026-10-08T17:06:51+00:00"
         }
     ],
     "packages-dev": [
@@ -11929,9 +11936,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "zasmall/relay-signature": 20
-    },
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

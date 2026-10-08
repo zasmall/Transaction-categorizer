@@ -107,8 +107,8 @@ Import status: `pending → parsing → normalizing → persisting → categoriz
 
 ## Receiving webhooks from Webhook Relay (Milestone 6)
 
-- `POST /api/webhooks/relay` lives in `routes/api.php`, so it's stateless and has no CSRF check. It's protected by the `relay.signature` middleware from the `zasmall/relay-signature` package, which verifies `X-Relay-Signature` (HMAC-SHA256 over the raw body, with a 300-second timestamp tolerance) against `RELAY_WEBHOOK_SECRET`. During a rotation, set that to a comma-separated list to accept two secrets.
+- `POST /api/webhooks/relay` lives in `routes/api.php`, so it's stateless and has no CSRF check. It's protected by the `relay.signature` middleware from the `zasmall/webhook-relay-signature` package, which verifies `X-Relay-Signature` (HMAC-SHA256 over the raw body, with a 300-second timestamp tolerance) against `RELAY_WEBHOOK_SECRET`. During a rotation, set that to a comma-separated list to accept two secrets.
 - `RelayWebhookController` validates the envelope (`id`, `type`, `data`) and `insertOrIgnore`s a `webhook_receipts` row. `event_id` is unique, so a redelivery (the relay is at-least-once) answers `200 {"duplicate": true}` and stores nothing.
 - `data` is re-encoded from the raw body as objects, so `{}` stays `{}`, both when stored and when shown on the `/webhooks` page.
 - Receipts aren't client-owned. They record what arrived; nothing acts on them yet. Turning `transaction.posted` events into real transactions (a "bank feed") would be the next step, and it would need a mapping from events to a client and bank account.
-- The package is required through a Composer **path repository** (`../webhook-relay-service/packages/relay-signature`), so it only installs where both projects are checked out side by side.
+- The package, `zasmall/webhook-relay-signature` (namespace `Zasmall\RelaySignature`), is installed from its GitHub repository as a Composer VCS repository (it isn't on Packagist) and pinned to `^0.1`. That repo is a read-only split of `packages/webhook-relay-signature` in Webhook Relay.
