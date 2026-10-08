@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Publishing transaction.categorized events to Webhook Relay. Off unless url and token are set.
+    'relay_publisher' => [
+        'url' => env('RELAY_URL'),
+        'source_token' => env('RELAY_SOURCE_TOKEN'),
+        'currency' => env('RELAY_CURRENCY', 'USD'),
+    ],
+
 ];

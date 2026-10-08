@@ -65,6 +65,7 @@ The full data model and implementation notes are in [docs/architecture.md](docs/
 - **AI calls are bounded.** Chunks are rate limited across all workers and retry through provider rate limits and outages with backoff. The SDK's own retries are switched off so there's exactly one retry policy, owned by the queue. The chart of accounts and examples sit in a cached system prompt shared by every chunk of an import.
 - **The AI provider is swappable.** Categorizers implement one interface; the Prism and official-SDK versions share the prompt, schema and parsing, so switching is a config change.
 - **Exports have no side effects.** Downloading is a plain GET; marking a batch as exported is a deliberate step taken after QuickBooks accepts the file, so a failed import can just be downloaded again.
+- **Approved decisions are published, once.** When a categorization is approved (by a person or a rule, never an AI suggestion), a queued job publishes `transaction.categorized` to Webhook Relay after the database commits. The idempotency key is the categorization id, so retries can't duplicate an event, and `categorized_at` lets subscribers order updates even if delivery reorders them. With no relay configured, nothing is published.
 - **Tenancy is explicit.** Client-owned models share a `BelongsToClient` trait with a `forClient()` scope, routes use scoped bindings (`/clients/{client}/rules/{rule}` 404s for another client's rule), and a policy separates owners from bookkeepers.
 
 ## Running locally
@@ -122,6 +123,18 @@ resources/js/pages/    imports/, review/, transactions/, rules/, exports/
 tests/                 Feature/ and Unit/, with statement fixtures in Fixtures/statements/
 docs/architecture.md   Data model, pipeline and design notes
 ```
+
+## Publishing to Webhook Relay
+
+Approved categorizations are published as `transaction.categorized` events, which [Cashflow Insights](https://github.com/zasmall/cashflow-insights) consumes through the relay. To turn it on, register this app as a source on the relay (`php artisan relay:source:create transaction-categorizer` there) and set:
+
+```
+RELAY_URL=http://localhost:8000
+RELAY_SOURCE_TOKEN=...   # printed by relay:source:create
+RELAY_CURRENCY=USD
+```
+
+`php artisan transactions:publish-categorized {client-slug}` backfills a client's existing approved transactions. It's safe to re-run, because each event's idempotency key repeats.
 
 ## Not built yet
 
