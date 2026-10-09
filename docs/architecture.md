@@ -120,4 +120,3 @@ Import status: `pending → parsing → normalizing → persisting → categoriz
 - `App\Relay\TransactionCategorizedEvent` owns the contract: ids as strings, `amount` as an exact decimal string from integer cents, `vendor` from `payee_normalized`, `category` from the chart-of-accounts name, `account_id` as the bank account, `currency` from `RELAY_CURRENCY` (the app is single-currency), and `categorized_at` from the categorization's `created_at` as the version time.
 - `RelayPublisher` is off unless `RELAY_URL` and `RELAY_SOURCE_TOKEN` are both set.
 - Backfill: `transactions:publish-categorized {client}` queues a job per current approved categorization.
-
