@@ -33,6 +33,9 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="AI_CATEGORIZER" value="disabled"/>
+        <!-- Never publish to a real relay from tests, whatever .env says; relay tests configure a fake. -->
+        <env name="RELAY_URL" value="" force="true"/>
+        <env name="RELAY_SOURCE_TOKEN" value="" force="true"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

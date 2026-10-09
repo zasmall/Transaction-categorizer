@@ -5,12 +5,14 @@ namespace App\Services;
 use App\Categorization\RuleEngine;
 use App\Enums\CategorizationMethod;
 use App\Enums\CategorizationStatus;
+use App\Jobs\Relay\PublishTransactionCategorized;
 use App\Models\Account;
 use App\Models\Categorization;
 use App\Models\CategorizationRule;
 use App\Models\Client;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Relay\RelayPublisher;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,8 @@ use InvalidArgumentException;
 class CategorizationService
 {
     private const CHUNK_SIZE = 500;
+
+    public function __construct(private readonly RelayPublisher $publisher) {}
 
     /**
      * A person picks the account. Always approved, and it overrides anything earlier.
@@ -138,6 +142,11 @@ class CategorizationService
                 'account_id' => $account->id,
                 'categorization_status' => $status,
             ]);
+
+            // Only final decisions leave the app; AI suggestions wait for a person.
+            if ($status === CategorizationStatus::Approved && $this->publisher->enabled()) {
+                PublishTransactionCategorized::dispatch($categorization->id)->afterCommit();
+            }
 
             return $categorization;
         });

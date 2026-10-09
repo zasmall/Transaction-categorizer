@@ -112,3 +112,11 @@ Import status: `pending → parsing → normalizing → persisting → categoriz
 - `data` is re-encoded from the raw body as objects, so `{}` stays `{}`, both when stored and when shown on the `/webhooks` page.
 - Receipts aren't client-owned. They record what arrived; nothing acts on them yet. Turning `transaction.posted` events into real transactions (a "bank feed") would be the next step, and it would need a mapping from events to a client and bank account.
 - The package, `zasmall/webhook-relay-signature` (namespace `Zasmall\RelaySignature`), is installed from its GitHub repository as a Composer VCS repository (it isn't on Packagist) and pinned to `^0.1`. That repo is a read-only split of `packages/webhook-relay-signature` in Webhook Relay.
+
+## Publishing to Webhook Relay (Milestone 7)
+
+- `CategorizationService::record()` is the single writer, so it's the single publish point: when the new status is `approved` and publishing is enabled, it dispatches `PublishTransactionCategorized` with `afterCommit()`. A categorization that rolls back is never published, and AI suggestions (`suggested`) never are.
+- The job (default queue, `tries` 8 with backoff) skips a categorization that's no longer current, since the later decision has its own job, then POSTs to the relay's `/api/events` with the source token and `Idempotency-Key: categorization-{id}`. The relay answers 202 for new and 200 for repeated keys; any other status throws so the queue retries.
+- `App\Relay\TransactionCategorizedEvent` owns the contract: ids as strings, `amount` as an exact decimal string from integer cents, `vendor` from `payee_normalized`, `category` from the chart-of-accounts name, `account_id` as the bank account, `currency` from `RELAY_CURRENCY` (the app is single-currency), and `categorized_at` from the categorization's `created_at` as the version time.
+- `RelayPublisher` is off unless `RELAY_URL` and `RELAY_SOURCE_TOKEN` are both set.
+- Backfill: `transactions:publish-categorized {client}` queues a job per current approved categorization.
